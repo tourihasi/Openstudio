@@ -1,0 +1,22 @@
+SELECT 
+  t.Month,
+  t.Day,
+  t.Hour,
+  t.Minute,
+  dd.KeyValue AS Zone,
+  d.VariableValue AS Temperature_C,
+  d.VariableValue * 1.8 + 32 AS Temperature_F
+FROM 
+  ReportVariableData d
+JOIN 
+  ReportVariableDataDictionary dd
+    ON d.ReportVariableDataDictionaryIndex = dd.ReportVariableDataDictionaryIndex
+JOIN 
+  Time t
+    ON d.TimeIndex = t.TimeIndex
+WHERE 
+  dd.VariableName = 'Zone Air Temperature'
+  AND dd.KeyValue = 'AIM0043 THERMALZONE'
+  AND (d.VariableValue * 1.8 + 32) < 74
+ORDER BY 
+  t.Month, t.Day, t.Hour, t.Minute;
