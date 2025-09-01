@@ -20,3 +20,26 @@ WHERE
   AND (d.VariableValue * 1.8 + 32) < 74
 ORDER BY 
   t.Month, t.Day, t.Hour, t.Minute;
+
+
+
+#Thermalzoneの抽出
+SELECT  
+  date(printf('%04d-%02d-%02d', 2006, t.Month, t.Day)) AS Date,
+  t.Hour,
+  d.VariableValue AS Temperature_C
+FROM 
+  ReportVariableData d
+JOIN 
+  ReportVariableDataDictionary dd
+    ON d.ReportVariableDataDictionaryIndex = dd.ReportVariableDataDictionaryIndex
+JOIN 
+  Time t
+    ON d.TimeIndex = t.TimeIndex
+WHERE 
+  dd.VariableName = 'Zone Air Temperature'
+  AND dd.KeyValue = 'AIM0438 THERMALZONE'
+ORDER BY 
+  Date,
+  t.Hour;
+
