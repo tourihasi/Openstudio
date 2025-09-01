@@ -23,7 +23,7 @@ ORDER BY
 
 
 
-#Thermalzoneの抽出
+"""#Thermalzoneの抽出"""
 SELECT  
   date(printf('%04d-%02d-%02d', 2006, t.Month, t.Day)) AS Date,
   t.Hour,
@@ -42,4 +42,5 @@ WHERE
 ORDER BY 
   Date,
   t.Hour;
+
 
