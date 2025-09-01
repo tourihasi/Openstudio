@@ -1,25 +1,27 @@
-SELECT 
-  t.Month,
-  t.Day,
+"""#室温の抽出"""
+SELECT
+  date(printf('%04d-%02d-%02d', 2006, t.Month, t.Day)) AS Date,
+  t.DayType AS Weekday,
   t.Hour,
-  t.Minute,
-  dd.KeyValue AS Zone,
-  d.VariableValue AS Temperature_C,
-  d.VariableValue * 1.8 + 32 AS Temperature_F
-FROM 
-  ReportVariableData d
-JOIN 
-  ReportVariableDataDictionary dd
-    ON d.ReportVariableDataDictionaryIndex = dd.ReportVariableDataDictionaryIndex
-JOIN 
-  Time t
-    ON d.TimeIndex = t.TimeIndex
-WHERE 
-  dd.VariableName = 'Zone Air Temperature'
-  AND dd.KeyValue = 'AIM0043 THERMALZONE'
-  AND (d.VariableValue * 1.8 + 32) < 74
-ORDER BY 
-  t.Month, t.Day, t.Hour, t.Minute;
+  z.VariableValue AS ZoneTemp_C,
+  o.VariableValue AS OutdoorTemp_C,
+  (z.VariableValue - o.VariableValue) AS "ΔT"
+FROM ReportVariableData AS z
+JOIN ReportVariableDataDictionary AS dz
+  ON z.ReportVariableDataDictionaryIndex = dz.ReportVariableDataDictionaryIndex
+JOIN Time AS t
+  ON z.TimeIndex = t.TimeIndex
+JOIN ReportVariableData AS o
+  ON o.TimeIndex = z.TimeIndex
+JOIN ReportVariableDataDictionary AS do
+  ON o.ReportVariableDataDictionaryIndex = do.ReportVariableDataDictionaryIndex
+WHERE
+  dz.VariableName   = 'Zone Air Temperature'
+  AND dz.KeyValue   = 'AIM0438 THERMALZONE'
+  AND do.VariableName = 'Site Outdoor Air Drybulb Temperature'
+  AND t.DayType NOT IN ('SummerDesignDay','WinterDesignDay') -- ← 設計日を除外
+ORDER BY Date, t.Hour;
+
 
 
 
@@ -42,5 +44,67 @@ WHERE
 ORDER BY 
   Date,
   t.Hour;
+
+
+"""#内部負荷の抽出"""
+WITH base AS (
+  SELECT
+    date(printf('%04d-%02d-%02d', 2006, t.Month, t.Day)) AS Date,
+    t.Hour AS Hour,
+    dd.VariableName,
+    d.VariableValue
+  FROM ReportVariableData d
+  JOIN ReportVariableDataDictionary dd
+    ON d.ReportVariableDataDictionaryIndex = dd.ReportVariableDataDictionaryIndex
+  JOIN Time t
+    ON d.TimeIndex = t.TimeIndex
+  WHERE
+    UPPER(dd.KeyValue) = 'AIM0438 THERMALZONE'  -- ←必要なら 'AIM0438 THERMALZONE' に
+    AND (
+      dd.VariableName LIKE 'Zone Infiltration%'
+      OR dd.VariableName LIKE 'Zone Ventilation%'
+      OR dd.VariableName LIKE 'Zone Outdoor Air%'
+    )
+    -- 設計日を除外するなら下行を有効化
+    -- AND t.DayType NOT IN ('SummerDesignDay','WinterDesignDay')
+)
+SELECT
+  Date, Hour,
+
+  -- Infiltration（状態量・流量系）
+  AVG(CASE WHEN VariableName = 'Zone Infiltration Air Change Rate' THEN VariableValue END) AS Infil_ACH_1ph,
+  SUM(CASE WHEN VariableName = 'Zone Infiltration Current Density Volume' THEN VariableValue END) AS Infil_CurVol_m3,
+  AVG(CASE WHEN VariableName = 'Zone Infiltration Current Density Volume Flow Rate' THEN VariableValue END) AS Infil_CurVolFlow_m3s,
+  SUM(CASE WHEN VariableName = 'Zone Infiltration Standard Density Volume' THEN VariableValue END) AS Infil_StdVol_m3,
+  AVG(CASE WHEN VariableName = 'Zone Infiltration Standard Density Volume Flow Rate' THEN VariableValue END) AS Infil_StdVolFlow_m3s,
+  SUM(CASE WHEN VariableName = 'Zone Infiltration Mass' THEN VariableValue END) AS Infil_Mass_kg,
+  AVG(CASE WHEN VariableName = 'Zone Infiltration Mass Flow Rate' THEN VariableValue END) AS Infil_MassFlow_kgs,
+
+  -- Infiltration（熱量・熱流）
+  SUM(CASE WHEN VariableName = 'Zone Infiltration Sensible Heat Gain Energy' THEN VariableValue END) AS Infil_SensGain_J,
+  SUM(CASE WHEN VariableName = 'Zone Infiltration Sensible Heat Loss Energy' THEN VariableValue END) AS Infil_SensLoss_J,
+  SUM(CASE WHEN VariableName = 'Zone Infiltration Latent Heat Gain Energy'   THEN VariableValue END) AS Infil_LatGain_J,
+  SUM(CASE WHEN VariableName = 'Zone Infiltration Latent Heat Loss Energy'   THEN VariableValue END) AS Infil_LatLoss_J,
+  SUM(CASE WHEN VariableName = 'Zone Infiltration Total Heat Gain Energy'    THEN VariableValue END) AS Infil_TotalGain_J,
+  SUM(CASE WHEN VariableName = 'Zone Infiltration Total Heat Loss Energy'    THEN VariableValue END) AS Infil_TotalLoss_J,
+
+  -- ※ Rate版（W）が出力されていれば平均を取ります。無ければNULLのままになります。
+  AVG(CASE WHEN VariableName = 'Zone Infiltration Sensible Heat Gain Rate' THEN VariableValue END) AS Infil_SensGain_W,
+  AVG(CASE WHEN VariableName = 'Zone Infiltration Sensible Heat Loss Rate' THEN VariableValue END) AS Infil_SensLoss_W,
+  AVG(CASE WHEN VariableName = 'Zone Infiltration Latent Heat Gain Rate'   THEN VariableValue END) AS Infil_LatGain_W,
+  AVG(CASE WHEN VariableName = 'Zone Infiltration Latent Heat Loss Rate'   THEN VariableValue END) AS Infil_LatLoss_W,
+  AVG(CASE WHEN VariableName = 'Zone Infiltration Total Heat Gain Rate'    THEN VariableValue END) AS Infil_TotalGain_W,
+  AVG(CASE WHEN VariableName = 'Zone Infiltration Total Heat Loss Rate'    THEN VariableValue END) AS Infil_TotalLoss_W,
+
+  -- Zone Outdoor Air（外気の状態量：必要に応じて残す/外す）
+  AVG(CASE WHEN VariableName = 'Zone Outdoor Air Drybulb Temperature' THEN VariableValue END) AS OA_Drybulb_C,
+  AVG(CASE WHEN VariableName = 'Zone Outdoor Air Wetbulb Temperature' THEN VariableValue END) AS OA_Wetbulb_C,
+  AVG(CASE WHEN VariableName = 'Zone Outdoor Air Wind Speed'          THEN VariableValue END) AS OA_Wind_mps
+
+FROM base
+GROUP BY Date, Hour
+ORDER BY Date, Hour;
+
+
 
 
