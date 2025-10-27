@@ -1,0 +1,97 @@
+{
+  "nbformat": 4,
+  "nbformat_minor": 0,
+  "metadata": {
+    "colab": {
+      "provenance": [],
+      "authorship_tag": "ABX9TyNOQ52D9+2erWtoUyzZ8Pij",
+      "include_colab_link": true
+    },
+    "kernelspec": {
+      "name": "python3",
+      "display_name": "Python 3"
+    },
+    "language_info": {
+      "name": "python"
+    }
+  },
+  "cells": [
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "view-in-github",
+        "colab_type": "text"
+      },
+      "source": [
+        "<a href=\"https://colab.research.google.com/github/tourihasi/Openstudio/blob/main/%E5%AE%A4%E5%90%8D%E3%81%AE%E7%B3%BB%E7%B5%B1%E7%A2%BA%E8%AA%8D\" target=\"_parent\"><img src=\"https://colab.research.google.com/assets/colab-badge.svg\" alt=\"Open In Colab\"/></a>"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {
+        "id": "m8fBLUFJOuuM"
+      },
+      "outputs": [],
+      "source": [
+        "# ① インストール & インポート（openstudio が未導入なら pip）\n",
+        "try:\n",
+        "    import openstudio as osd\n",
+        "except ModuleNotFoundError:\n",
+        "    # ①-1 Colab では '!' が必要（導入に少し時間がかかります）\n",
+        "    !pip -q install openstudio\n",
+        "    import openstudio as osd\n",
+        "\n",
+        "# ② 標準ライブラリ & Colab入出力 & 表形式\n",
+        "import io, os\n",
+        "import pandas as pd\n",
+        "from google.colab import files\n",
+        "\n",
+        "# ③ OSMファイルのアップロード\n",
+        "print(\"③ OSMファイル（.osm）を1つ選択してください...\")\n",
+        "uploaded = files.upload()\n",
+        "osm_path = next((k for k in uploaded.keys() if k.lower().endswith(\".osm\")), None)\n",
+        "assert osm_path, \"OSMファイル（.osm）が見つかりませんでした。\"\n",
+        "\n",
+        "# ④ モデルの読み込み（失敗時は例外）\n",
+        "opt_model = osd.model.Model.load(osd.path(osm_path))\n",
+        "assert opt_model.is_initialized(), f\"OpenStudio Model の読み込みに失敗: {osm_path}\"\n",
+        "m = opt_model.get()\n",
+        "\n",
+        "# ⑤ ThermalZone → AirLoopHVAC の対応関係を収集\n",
+        "rows = []\n",
+        "zones = m.getThermalZones()\n",
+        "\n",
+        "for z in zones:\n",
+        "    # ⑤-1 ゾーン名（nameStringは常に文字列を返す簡便メソッド）\n",
+        "    zone_name = z.nameString()\n",
+        "\n",
+        "    # ⑤-2 ゾーンに紐づくAirLoopHVAC（ない場合は None）\n",
+        "    #     ※ 通常は1つですが、Noneの可能性もあるため存在チェック\n",
+        "    opt_loop = z.airLoopHVAC()\n",
+        "    if opt_loop.is_initialized():\n",
+        "        loop_name = opt_loop.get().nameString()\n",
+        "    else:\n",
+        "        loop_name = None  # 端末未接続やDOAS未割当など\n",
+        "\n",
+        "    # ⑤-3 追加情報（オプション）：設計サプライ温度スケジュールなどが欲しければ loop から辿れます\n",
+        "    rows.append({\n",
+        "        \"ThermalZone\": zone_name,\n",
+        "        \"AirLoopHVAC\": loop_name\n",
+        "    })\n",
+        "\n",
+        "# ⑥ DataFrame 化 & 表示\n",
+        "df = pd.DataFrame(rows).sort_values(by=[\"AirLoopHVAC\", \"ThermalZone\"], na_position=\"last\").reset_index(drop=True)\n",
+        "df\n",
+        "\n",
+        "# ⑦ CSV 出力 & 自動ダウンロード\n",
+        "csv_name = os.path.splitext(os.path.basename(osm_path))[0] + \"_Zone_AirLoop_Map.csv\"\n",
+        "df.to_csv(csv_name, index=False, encoding=\"utf-8-sig\")\n",
+        "files.download(csv_name)\n",
+        "\n",
+        "# ⑧ 付記（ログ出力）：サマリー\n",
+        "print(f\"⑧ サマリー：ゾーン数 = {len(zones)}, AirLoop未接続ゾーン数 = {df['AirLoopHVAC'].isna().sum()}\")\n"
+      ]
+    }
+  ]
+}
