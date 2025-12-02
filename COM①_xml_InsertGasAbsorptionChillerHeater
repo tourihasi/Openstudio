@@ -3,35 +3,153 @@
   <schema_version>3.1</schema_version>
   <name>insert_gas_absorption_chiller_heater</name>
   <uid>4dfde3d8-1761-40b5-94ee-869597609e47</uid>
-  <version_id>0c0563d6-906e-403d-ad6f-8ed9c609b20f</version_id>
-  <version_modified>2025-10-03T08:30:56Z</version_modified>
+  <version_id>6ed518b5-4ef8-45c9-b386-ef574dcad5c6</version_id>
+  <version_modified>2025-12-01T05:04:04Z</version_modified>
   <xml_checksum>72ECF657</xml_checksum>
   <class_name>InsertGasAbsorptionChillerHeater</class_name>
-  <display_name>Insert Gas Absorption Chiller-Heater</display_name>
-  <description>Replace this text with an explanation of what the measure does in terms that can be understood by a general building professional audience (building owners, architects, engineers, contractors, etc.).  This description will be used to create reports aimed at convincing the owner and/or design team to implement the measure in the actual building design.  For this reason, the description may include details about how the measure would be implemented, along with explanations of qualitative benefits associated with the measure.  It is good practice to include citations in the measure if the description is taken from a known source or if specific benefits are listed.</description>
-  <modeler_description>Replace this text with an explanation for the energy modeler specifically.  It should explain how the measure is modeled, including any requirements about how the baseline model must be set up, major assumptions, citations of references to applicable modeling resources, etc.  The energy modeler should be able to read this description and understand what changes the measure is making to the model and why these changes are being made.  Because the Modeler Description is written for an expert audience, using common abbreviations for brevity is good practice.</modeler_description>
+  <display_name>Insert Gas Absorption Chiller-Heater (IDF Injector)</display_name>
+  <description>ユーザーが指定したIDFスニペット（例：ChillerHeater:Absorption:DirectFired）をWorkspaceへ挿入します。</description>
+  <modeler_description>OpenStudio Modelに未実装のEnergyPlusコンポーネントを、IDF文字列として直接Workspaceに追加します。</modeler_description>
   <arguments>
-
-    <!-- ④ 引数: equip_name -->
     <argument>
       <name>equip_name</name>
-      <display_name>機器名（&lt;NAME&gt; トークン置換）</display_name>
+      <display_name>機器名（トークン &lt;NAME&gt; に置換）</display_name>
       <type>String</type>
       <required>true</required>
+      <model_dependent>false</model_dependent>
       <default_value>Gas Absorption Chiller-Heater 1</default_value>
     </argument>
-
-    <!-- ⑤ 引数: idf_text -->
     <argument>
       <name>idf_text</name>
-      <display_name>IDFスニペット（セミコロン終端、複数可）</display_name>
-      <type>LongString</type>
+      <display_name>挿入するIDFスニペット（セミコロン ; で終端）</display_name>
+      <type>String</type>
       <required>true</required>
-      <default_value>
-      </default_value>
+      <model_dependent>false</model_dependent>
+      <default_value>ChillerHeater:Absorption:DirectFired,
+  Big Chiller,              !- 01 Chiller Name
+  703256,                   !- 02 Nominal Cooling Capacity {W}
+  0.94,                     !- 03 Heating to Cooling Capacity Ratio
+  0.97,                     !- 04 Fuel Input to Cooling Output Ratio
+  1.25,                     !- 05 Fuel Input to Heating Output Ratio
+  0.01,                     !- 06 Electric Input to Cooling Output Ratio
+  0.005,                    !- 07 Electric Input to Heating Output Ratio
+  Node 13,                  !- 08 Chilled Water Side Inlet Node Name
+  Node 18,                  !- 09 Chilled Water Side Outlet Node Name
+  Node 29,                  !- 10 Condenser Side Inlet Node Name
+  Node 34,                  !- 11 Condenser Side Outlet Node Name
+  Node 39,                  !- 12 Hot Water Side Inlet Node Name
+  Node 42,                  !- 13 Hot Water Side Outlet Node Name
+  0.000001,                 !- 14 Minimum Part Load Ratio
+  1.0,                      !- 15 Maximum Part Load Ratio
+  0.6,                      !- 16 Optimum Part Load Ratio
+  32,                       !- 17 Design Entering Condenser Water Temperature {C}
+  7,                        !- 18 Design Leaving Chilled Water Temperature {C}
+  0.2400,                   !- 19 Design Chilled Water Flow Rate {m3/s}
+  0.5667,                   !- 20 Design Condenser Water Flow Rate {m3/s}
+  0.2400,                   !- 21 Design Hot Water Flow Rate {m3/s}
+  GasAbsFlatBiQuad,         !- 22 Cooling Capacity Function of Temperature Curve Name
+  GasAbsFlatBiQuad,         !- 23 Fuel Input to Cooling Output Ratio Function of Temperature Curve Name
+  GasAbsLinearQuad,         !- 24 Fuel Input to Cooling Output Ratio Function of Part Load Ratio Curve Name
+  GasAbsFlatBiQuad,         !- 25 Electric Input to Cooling Output Ratio Function of Temperature Curve Name
+  GasAbsFlatQuad,           !- 26 Electric Input to Cooling Output Ratio Function of Part Load Ratio Curve Name
+  GasAbsInvLinearQuad,      !- 27 Heating Capacity Function of Cooling Capacity Curve Name
+  GasAbsLinearQuad,         !- 28 Fuel Input to Heat Output Ratio During Heating Only Operation Curve Name
+  EnteringCondenser,        !- 29 Temperature Curve Input Variable
+  WaterCooled,              !- 30 Condenser Type
+  2,                        !- 31 Chilled Water Temperature Lower Limit {C}
+  0,                        !- 32 Fuel Higher Heating Value {kJ/kg}
+  NaturalGas,               !- 33 Fuel Type
+  1.0;                      !- 34 Sizing Factor
+
+Curve:Biquadratic,
+  GasAbsFlatBiQuad,         !- 35 Name
+  1.0, 0.0, 0.0,            !- 36 Coeff1..3 (定数1.0のフラットカーブ)
+  0.0, 0.0, 0.0,            !- 37 Coeff4..6
+  5.0, 40.0,                !- 38 Min/Max x (Chilled water / cond water temp 想定)
+  20.0, 45.0;               !- 39 Min/Max y
+
+Curve:Quadratic,
+  GasAbsLinearQuad,         !- 40 Name
+  0.0, 1.0, 0.0,            !- 41 y = 1.0 * x
+  0.0, 1.0;                 !- 42 Min/Max x (PLR想定)
+
+Curve:Quadratic,
+  GasAbsFlatQuad,           !- 43 Name
+  1.0, 0.0, 0.0,            !- 44 y = 1.0 (フラット)
+  0.0, 1.0;                 !- 45 Min/Max x
+
+Curve:Linear,
+  GasAbsInvLinearQuad,      !- 46 Name
+  1.0, 0.0,                 !- 47 y = 1.0 * x + 0
+  0.0, 1.0;                 !- 48 Min/Max x
+
+</default_value>
+    </argument>
+    <argument>
+      <name>old_chiller_name</name>
+      <display_name>既存チラー名（置換対象：例 Chiller - Water Cooled）</display_name>
+      <type>String</type>
+      <required>true</required>
+      <model_dependent>false</model_dependent>
+      <default_value>Chiller - Water Cooled</default_value>
+    </argument>
+    <argument>
+      <name>old_boiler_name</name>
+      <display_name>既存ボイラー名（置換対象：例 HW Boiler）</display_name>
+      <type>String</type>
+      <required>true</required>
+      <model_dependent>false</model_dependent>
+      <default_value>HW Boiler</default_value>
+    </argument>
+    <argument>
+      <name>chw_in_node</name>
+      <display_name>冷水側入口ノード名（Chilled Water Side Inlet）</display_name>
+      <type>String</type>
+      <required>true</required>
+      <model_dependent>false</model_dependent>
+      <default_value>Node 13</default_value>
+    </argument>
+    <argument>
+      <name>chw_out_node</name>
+      <display_name>冷水側出口ノード名（Chilled Water Side Outlet）</display_name>
+      <type>String</type>
+      <required>true</required>
+      <model_dependent>false</model_dependent>
+      <default_value>Node 18</default_value>
+    </argument>
+    <argument>
+      <name>hw_in_node</name>
+      <display_name>温水側入口ノード名（Hot Water Side Inlet）</display_name>
+      <type>String</type>
+      <required>true</required>
+      <model_dependent>false</model_dependent>
+      <default_value>Node 39</default_value>
+    </argument>
+    <argument>
+      <name>hw_out_node</name>
+      <display_name>温水側出口ノード名（Hot Water Side Outlet）</display_name>
+      <type>String</type>
+      <required>true</required>
+      <model_dependent>false</model_dependent>
+      <default_value>Node 42</default_value>
+    </argument>
+    <argument>
+      <name>cond_in_node</name>
+      <display_name>凝縮水側入口ノード名（Condenser Side Inlet）</display_name>
+      <type>String</type>
+      <required>true</required>
+      <model_dependent>false</model_dependent>
+      <default_value>Node 29</default_value>
+    </argument>
+    <argument>
+      <name>cond_out_node</name>
+      <display_name>凝縮水側出口ノード名（Condenser Side Outlet）</display_name>
+      <type>String</type>
+      <required>true</required>
+      <model_dependent>false</model_dependent>
+      <default_value>Node 34</default_value>
     </argument>
   </arguments>
-	
   <outputs />
   <provenances />
   <tags>
@@ -70,7 +188,7 @@
       <filename>README.md</filename>
       <filetype>md</filetype>
       <usage_type>readme</usage_type>
-      <checksum>22F49151</checksum>
+      <checksum>FC95D34A</checksum>
     </file>
     <file>
       <filename>README.md.erb</filename>
@@ -93,7 +211,7 @@
       <filename>measure.rb</filename>
       <filetype>rb</filetype>
       <usage_type>script</usage_type>
-      <checksum>E464B2F8</checksum>
+      <checksum>E58FD1A3</checksum>
     </file>
     <file>
       <filename>insert_gas_absorption_chiller_heater_test.rb</filename>
