@@ -1,0 +1,35 @@
+-- ⑥ 室温=Zone Mean Air Temperature、外気温=Site Outdoor Air Drybulb Temperature
+--    ゾーン名と 'Environment' を辞書テーブルで特定してから突き合わせ
+SELECT
+  -- ⑥-1 日付を生成（E+既定年の2006でOK、年は解析用途なので固定で可）
+  date(printf('%04d-%02d-%02d', 2006, t.Month, t.Day)) AS Date,
+  -- ⑥-2 曜日/日種
+  t.DayType AS Weekday,
+  -- ⑥-3 時
+  t.Hour,
+  -- ⑥-4 室温
+  z.VariableValue AS ZoneTemp_C,
+  -- ⑥-5 外気温
+  o.VariableValue AS OutdoorTemp_C,
+  -- ⑥-6 ΔT
+  (z.VariableValue - o.VariableValue) AS "ΔT"
+FROM ReportVariableData AS z
+JOIN ReportVariableDataDictionary AS dz
+  ON z.ReportVariableDataDictionaryIndex = dz.ReportVariableDataDictionaryIndex
+JOIN Time AS t
+  ON z.TimeIndex = t.TimeIndex
+JOIN ReportVariableData AS o
+  ON o.TimeIndex = z.TimeIndex
+JOIN ReportVariableDataDictionary AS do
+  ON o.ReportVariableDataDictionaryIndex = do.ReportVariableDataDictionaryIndex
+WHERE
+  -- ⑥-7 室温の“正しい”変数名（Mean が入る）
+  dz.VariableName = 'Zone Mean Air Temperature'
+  -- ⑥-8 ゾーン名は ③で得た完全一致文字列を貼り付け（末尾空白に注意）
+  AND dz.KeyValue = '01016 展示ホール会議室 THERMALZONE'
+  -- ⑥-9 外気温は通常 KeyValue='Environment'
+  AND do.VariableName = 'Site Outdoor Air Drybulb Temperature'
+  AND do.KeyValue = 'Environment'
+  -- ⑥-10 設計日を除外（⑤で DayType を確認のうえ必要なら調整）
+  AND t.DayType NOT IN ('SummerDesignDay','WinterDesignDay')
+ORDER BY Date, t.Hour;
