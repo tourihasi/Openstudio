@@ -1,0 +1,291 @@
+-- ① 対象ゾーンの内部発熱（人員＋機器＋照明）を
+--    Rate（W）・Energy（J）・Occupant Count で毎時集計
+SELECT
+  -- ②-1 日付（E+既定年2006で日付生成）
+  date(printf('%04d-%02d-%02d', 2006, t.Month, t.Day)) AS Date,
+  -- ②-2 日種（平日/休日/設計日など）
+  t.DayType AS Weekday,
+  -- ②-3 時刻（時）
+  t.Hour,
+
+  -- ③ 人員負荷（Zone People 系）---------------------------------
+
+  -- ③-1 人員 Convective Heating Rate [W]
+  SUM(CASE
+        WHEN dd.VariableName = 'Zone People Convective Heating Rate'
+        THEN d.VariableValue ELSE 0
+      END) AS People_Convective_Rate_W,
+
+  -- ③-2 人員 Convective Heating Energy [J]
+  SUM(CASE
+        WHEN dd.VariableName = 'Zone People Convective Heating Energy'
+        THEN d.VariableValue ELSE 0
+      END) AS People_Convective_Energy_J,
+
+  -- ③-3 人員 Latent Gain Rate [W]
+  SUM(CASE
+        WHEN dd.VariableName = 'Zone People Latent Gain Rate'
+        THEN d.VariableValue ELSE 0
+      END) AS People_Latent_Rate_W,
+
+  -- ③-4 人員 Latent Gain Energy [J]
+  SUM(CASE
+        WHEN dd.VariableName = 'Zone People Latent Gain Energy'
+        THEN d.VariableValue ELSE 0
+      END) AS People_Latent_Energy_J,
+
+  -- ③-5 人員 Radiant Heating Rate [W]
+  SUM(CASE
+        WHEN dd.VariableName = 'Zone People Radiant Heating Rate'
+        THEN d.VariableValue ELSE 0
+      END) AS People_Radiant_Rate_W,
+
+  -- ③-6 人員 Radiant Heating Energy [J]
+  SUM(CASE
+        WHEN dd.VariableName = 'Zone People Radiant Heating Energy'
+        THEN d.VariableValue ELSE 0
+      END) AS People_Radiant_Energy_J,
+
+  -- ③-7 人員 Sensible Heating Rate [W]
+  SUM(CASE
+        WHEN dd.VariableName = 'Zone People Sensible Heating Rate'
+        THEN d.VariableValue ELSE 0
+      END) AS People_Sensible_Rate_W,
+
+  -- ③-8 人員 Sensible Heating Energy [J]
+  SUM(CASE
+        WHEN dd.VariableName = 'Zone People Sensible Heating Energy'
+        THEN d.VariableValue ELSE 0
+      END) AS People_Sensible_Energy_J,
+
+  -- ③-9 人員 Total Heating Rate [W]
+  SUM(CASE
+        WHEN dd.VariableName = 'Zone People Total Heating Rate'
+        THEN d.VariableValue ELSE 0
+      END) AS People_Total_Rate_W,
+
+  -- ③-10 人員 Total Heating Energy [J]
+  SUM(CASE
+        WHEN dd.VariableName = 'Zone People Total Heating Energy'
+        THEN d.VariableValue ELSE 0
+      END) AS People_Total_Energy_J,
+
+  -- ③-11 人員 Occupant Count [人]
+  SUM(CASE
+        WHEN dd.VariableName = 'Zone People Occupant Count'
+        THEN d.VariableValue ELSE 0
+      END) AS People_Occupant_Count,
+
+  -- ④ 機器負荷（Zone Electric Equipment 系）---------------------
+
+  -- ④-1 機器 Convective Heating Rate [W]
+  SUM(CASE
+        WHEN dd.VariableName = 'Zone Electric Equipment Convective Heating Rate'
+        THEN d.VariableValue ELSE 0
+      END) AS Equip_Convective_Rate_W,
+
+  -- ④-2 機器 Convective Heating Energy [J]
+  SUM(CASE
+        WHEN dd.VariableName = 'Zone Electric Equipment Convective Heating Energy'
+        THEN d.VariableValue ELSE 0
+      END) AS Equip_Convective_Energy_J,
+
+  -- ④-3 機器 Electricity Rate [W]
+  SUM(CASE
+        WHEN dd.VariableName = 'Zone Electric Equipment Electricity Rate'
+        THEN d.VariableValue ELSE 0
+      END) AS Equip_Electric_Rate_W,
+
+  -- ④-4 機器 Electricity Energy [J]
+  SUM(CASE
+        WHEN dd.VariableName = 'Zone Electric Equipment Electricity Energy'
+        THEN d.VariableValue ELSE 0
+      END) AS Equip_Electric_Energy_J,
+
+  -- ④-5 機器 Latent Gain Rate [W]
+  SUM(CASE
+        WHEN dd.VariableName = 'Zone Electric Equipment Latent Gain Rate'
+        THEN d.VariableValue ELSE 0
+      END) AS Equip_Latent_Rate_W,
+
+  -- ④-6 機器 Latent Gain Energy [J]
+  SUM(CASE
+        WHEN dd.VariableName = 'Zone Electric Equipment Latent Gain Energy'
+        THEN d.VariableValue ELSE 0
+      END) AS Equip_Latent_Energy_J,
+
+  -- ④-7 機器 Lost Heat Rate [W]
+  SUM(CASE
+        WHEN dd.VariableName = 'Zone Electric Equipment Lost Heat Rate'
+        THEN d.VariableValue ELSE 0
+      END) AS Equip_LostHeat_Rate_W,
+
+  -- ④-8 機器 Lost Heat Energy [J]
+  SUM(CASE
+        WHEN dd.VariableName = 'Zone Electric Equipment Lost Heat Energy'
+        THEN d.VariableValue ELSE 0
+      END) AS Equip_LostHeat_Energy_J,
+
+  -- ④-9 機器 Radiant Heating Rate [W]
+  SUM(CASE
+        WHEN dd.VariableName = 'Zone Electric Equipment Radiant Heating Rate'
+        THEN d.VariableValue ELSE 0
+      END) AS Equip_Radiant_Rate_W,
+
+  -- ④-10 機器 Radiant Heating Energy [J]
+  SUM(CASE
+        WHEN dd.VariableName = 'Zone Electric Equipment Radiant Heating Energy'
+        THEN d.VariableValue ELSE 0
+      END) AS Equip_Radiant_Energy_J,
+
+  -- ④-11 機器 Total Heating Rate [W]
+  SUM(CASE
+        WHEN dd.VariableName = 'Zone Electric Equipment Total Heating Rate'
+        THEN d.VariableValue ELSE 0
+      END) AS Equip_Total_Rate_W,
+
+  -- ④-12 機器 Total Heating Energy [J]
+  SUM(CASE
+        WHEN dd.VariableName = 'Zone Electric Equipment Total Heating Energy'
+        THEN d.VariableValue ELSE 0
+      END) AS Equip_Total_Energy_J,
+
+  -- ⑤ 照明負荷（Zone Lights 系）-------------------------------
+
+  -- ⑤-1 照明 Convective Heating Rate [W]
+  SUM(CASE
+        WHEN dd.VariableName = 'Zone Lights Convective Heating Rate'
+        THEN d.VariableValue ELSE 0
+      END) AS Lights_Convective_Rate_W,
+
+  -- ⑤-2 照明 Convective Heating Energy [J]
+  SUM(CASE
+        WHEN dd.VariableName = 'Zone Lights Convective Heating Energy'
+        THEN d.VariableValue ELSE 0
+      END) AS Lights_Convective_Energy_J,
+
+  -- ⑤-3 照明 Electricity Rate [W]
+  SUM(CASE
+        WHEN dd.VariableName = 'Zone Lights Electricity Rate'
+        THEN d.VariableValue ELSE 0
+      END) AS Lights_Electric_Rate_W,
+
+  -- ⑤-4 照明 Electricity Energy [J]
+  SUM(CASE
+        WHEN dd.VariableName = 'Zone Lights Electricity Energy'
+        THEN d.VariableValue ELSE 0
+      END) AS Lights_Electric_Energy_J,
+
+  -- ⑤-5 照明 Radiant Heating Rate [W]
+  SUM(CASE
+        WHEN dd.VariableName = 'Zone Lights Radiant Heating Rate'
+        THEN d.VariableValue ELSE 0
+      END) AS Lights_Radiant_Rate_W,
+
+  -- ⑤-6 照明 Radiant Heating Energy [J]
+  SUM(CASE
+        WHEN dd.VariableName = 'Zone Lights Radiant Heating Energy'
+        THEN d.VariableValue ELSE 0
+      END) AS Lights_Radiant_Energy_J,
+
+  -- ⑤-7 照明 Return Air Heating Rate [W]
+  SUM(CASE
+        WHEN dd.VariableName = 'Zone Lights Return Air Heating Rate'
+        THEN d.VariableValue ELSE 0
+      END) AS Lights_ReturnAir_Rate_W,
+
+  -- ⑤-8 照明 Return Air Heating Energy [J]
+  SUM(CASE
+        WHEN dd.VariableName = 'Zone Lights Return Air Heating Energy'
+        THEN d.VariableValue ELSE 0
+      END) AS Lights_ReturnAir_Energy_J,
+
+  -- ⑤-9 照明 Total Heating Rate [W]
+  SUM(CASE
+        WHEN dd.VariableName = 'Zone Lights Total Heating Rate'
+        THEN d.VariableValue ELSE 0
+      END) AS Lights_Total_Rate_W,
+
+  -- ⑤-10 照明 Total Heating Energy [J]
+  SUM(CASE
+        WHEN dd.VariableName = 'Zone Lights Total Heating Energy'
+        THEN d.VariableValue ELSE 0
+      END) AS Lights_Total_Energy_J,
+
+  -- ⑤-11 照明 Visible Radiation Heating Rate [W]
+  SUM(CASE
+        WHEN dd.VariableName = 'Zone Lights Visible Radiation Heating Rate'
+        THEN d.VariableValue ELSE 0
+      END) AS Lights_VisibleRad_Rate_W,
+
+  -- ⑤-12 照明 Visible Radiation Heating Energy [J]
+  SUM(CASE
+        WHEN dd.VariableName = 'Zone Lights Visible Radiation Heating Energy'
+        THEN d.VariableValue ELSE 0
+      END) AS Lights_VisibleRad_Energy_J
+
+FROM
+  -- ⑥ 時系列データ本体
+  ReportVariableData d
+JOIN
+  -- ⑦ 変数辞書（VariableName, KeyValueを含む）
+  ReportVariableDataDictionary dd
+    ON d.ReportVariableDataDictionaryIndex = dd.ReportVariableDataDictionaryIndex
+JOIN
+  -- ⑧ 時刻テーブル
+  Time t
+    ON d.TimeIndex = t.TimeIndex
+WHERE
+  -- ⑨ 対象ThermalZone名（実際のKeyValueに置き換え）
+  dd.KeyValue = '01016 展示ホール会議室 THERMALZONE'
+  -- ⑩ 抽出対象のVariableName（すべて列挙）
+  AND dd.VariableName IN (
+    -- ⑩-1 People
+    'Zone People Convective Heating Energy',
+    'Zone People Convective Heating Rate',
+    'Zone People Latent Gain Energy',
+    'Zone People Latent Gain Rate',
+    'Zone People Occupant Count',
+    'Zone People Radiant Heating Energy',
+    'Zone People Radiant Heating Rate',
+    'Zone People Sensible Heating Energy',
+    'Zone People Sensible Heating Rate',
+    'Zone People Total Heating Energy',
+    'Zone People Total Heating Rate',
+
+    -- ⑩-2 Electric Equipment
+    'Zone Electric Equipment Convective Heating Energy',
+    'Zone Electric Equipment Convective Heating Rate',
+    'Zone Electric Equipment Electricity Energy',
+    'Zone Electric Equipment Electricity Rate',
+    'Zone Electric Equipment Latent Gain Energy',
+    'Zone Electric Equipment Latent Gain Rate',
+    'Zone Electric Equipment Lost Heat Energy',
+    'Zone Electric Equipment Lost Heat Rate',
+    'Zone Electric Equipment Radiant Heating Energy',
+    'Zone Electric Equipment Radiant Heating Rate',
+    'Zone Electric Equipment Total Heating Energy',
+    'Zone Electric Equipment Total Heating Rate',
+
+    -- ⑩-3 Lights
+    'Zone Lights Convective Heating Energy',
+    'Zone Lights Convective Heating Rate',
+    'Zone Lights Electricity Energy',
+    'Zone Lights Electricity Rate',
+    'Zone Lights Radiant Heating Energy',
+    'Zone Lights Radiant Heating Rate',
+    'Zone Lights Return Air Heating Energy',
+    'Zone Lights Return Air Heating Rate',
+    'Zone Lights Total Heating Energy',
+    'Zone Lights Total Heating Rate',
+    'Zone Lights Visible Radiation Heating Energy',
+    'Zone Lights Visible Radiation Heating Rate'
+  )
+  -- ⑪ 設計日を除外（必要に応じて調整）
+  AND t.DayType NOT IN ('SummerDesignDay', 'WinterDesignDay')
+GROUP BY
+  -- ⑫ 毎時で集計
+  Date, Weekday, t.Hour
+ORDER BY
+  -- ⑬ 時系列順にソート
+  Date, t.Hour;
