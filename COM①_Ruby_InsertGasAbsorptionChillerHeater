@@ -1,92 +1,417 @@
-# insert your copyright here
+# ============================================================
+# ① OpenStudio EnergyPlus Measure
+#    Gas Absorption Chiller-Heater (IDF Injector)
+# ============================================================
 
-# see the URL below for information on how to write OpenStudio measures
-# http://nrel.github.io/OpenStudio-user-documentation/reference/measure_writing_guide/
+# ①-1 必須モジュールのロード
+require 'openstudio'
 
-# start the measure
+# ② Measureクラス定義（EnergyPlusMeasure を継承）
 class InsertGasAbsorptionChillerHeater < OpenStudio::Measure::EnergyPlusMeasure
-  # human readable name
+
+  # ③ Measure名（App上の表示）
   def name
-    # Measure name should be the title case of the class name.
-    return 'Insert Gas Absorption Chiller-Heater'
+    'Insert Gas Absorption Chiller-Heater (IDF Injector)'
   end
 
-  # human readable description
+  # ④ 一般向け説明
   def description
-    return 'Replace this text with an explanation of what the measure does in terms that can be understood by a general building professional audience (building owners, architects, engineers, contractors, etc.).  This description will be used to create reports aimed at convincing the owner and/or design team to implement the measure in the actual building design.  For this reason, the description may include details about how the measure would be implemented, along with explanations of qualitative benefits associated with the measure.  It is good practice to include citations in the measure if the description is taken from a known source or if specific benefits are listed.'
+    'ユーザーが指定したIDFスニペット（例：ChillerHeater:Absorption:DirectFired）をWorkspaceへ挿入します。'
   end
 
-  # human readable description of modeling approach
+  # ⑤ モデラー向け説明
   def modeler_description
-    return 'Replace this text with an explanation for the energy modeler specifically.  It should explain how the measure is modeled, including any requirements about how the baseline model must be set up, major assumptions, citations of references to applicable modeling resources, etc.  The energy modeler should be able to read this description and understand what changes the measure is making to the model and why these changes are being made.  Because the Modeler Description is written for an expert audience, using common abbreviations for brevity is good practice.'
+    'OpenStudio Modelに未実装のEnergyPlusコンポーネントを、IDF文字列として直接Workspaceに追加します。'
   end
 
-  # define the arguments that the user will input
+  # ⑥ 引数定義
   def arguments(workspace)
-    args = OpenStudio::Measure::OSArgumentVector.new
+    args = OpenStudio::Measure::OSArgumentVector.new  # ⑥-0-1
 
-    # the name of the zone to add to the model
-    zone_name = OpenStudio::Measure::OSArgument.makeStringArgument('zone_name', true)
-    zone_name.setDisplayName('New zone name')
-    zone_name.setDescription('This name will be used as the name of the new zone.')
-    args << zone_name
+    # ⑥-1 機器名
+    equip_name = OpenStudio::Measure::OSArgument.makeStringArgument('equip_name', true) # ⑥-1-1
+    equip_name.setDisplayName('機器名（トークン <NAME> に置換）')                         # ⑥-1-2
+    equip_name.setDefaultValue('Gas Absorption Chiller-Heater 1')                      # ⑥-1-3
+    args << equip_name                                                                 # ⑥-1-4
 
-    return args
+    # ⑥-2 IDFスニペット（複数可、セミコロン終端）
+template = <<-IDF  # ⑥-2-1
+ChillerHeater:Absorption:DirectFired,
+  Big Chiller,              !- 01 Chiller Name
+  703256,                   !- 02 Nominal Cooling Capacity {W}
+  0.94,                     !- 03 Heating to Cooling Capacity Ratio
+  0.97,                     !- 04 Fuel Input to Cooling Output Ratio
+  1.25,                     !- 05 Fuel Input to Heating Output Ratio
+  0.01,                     !- 06 Electric Input to Cooling Output Ratio
+  0.005,                    !- 07 Electric Input to Heating Output Ratio
+  Node 13,                  !- 08 Chilled Water Side Inlet Node Name
+  Node 18,                  !- 09 Chilled Water Side Outlet Node Name
+  Node 29,                  !- 10 Condenser Side Inlet Node Name
+  Node 34,                  !- 11 Condenser Side Outlet Node Name
+  Node 39,                  !- 12 Hot Water Side Inlet Node Name
+  Node 42,                  !- 13 Hot Water Side Outlet Node Name
+  0.000001,                 !- 14 Minimum Part Load Ratio
+  1.0,                      !- 15 Maximum Part Load Ratio
+  0.6,                      !- 16 Optimum Part Load Ratio
+  32,                       !- 17 Design Entering Condenser Water Temperature {C}
+  7,                        !- 18 Design Leaving Chilled Water Temperature {C}
+  0.2400,                   !- 19 Design Chilled Water Flow Rate {m3/s}
+  0.5667,                   !- 20 Design Condenser Water Flow Rate {m3/s}
+  0.2400,                   !- 21 Design Hot Water Flow Rate {m3/s}
+  GasAbsFlatBiQuad,         !- 22 Cooling Capacity Function of Temperature Curve Name
+  GasAbsFlatBiQuad,         !- 23 Fuel Input to Cooling Output Ratio Function of Temperature Curve Name
+  GasAbsLinearQuad,         !- 24 Fuel Input to Cooling Output Ratio Function of Part Load Ratio Curve Name
+  GasAbsFlatBiQuad,         !- 25 Electric Input to Cooling Output Ratio Function of Temperature Curve Name
+  GasAbsFlatQuad,           !- 26 Electric Input to Cooling Output Ratio Function of Part Load Ratio Curve Name
+  GasAbsInvLinearQuad,      !- 27 Heating Capacity Function of Cooling Capacity Curve Name
+  GasAbsLinearQuad,         !- 28 Fuel Input to Heat Output Ratio During Heating Only Operation Curve Name
+  EnteringCondenser,        !- 29 Temperature Curve Input Variable
+  WaterCooled,              !- 30 Condenser Type
+  2,                        !- 31 Chilled Water Temperature Lower Limit {C}
+  0,                        !- 32 Fuel Higher Heating Value {kJ/kg}
+  NaturalGas,               !- 33 Fuel Type
+  1.0;                      !- 34 Sizing Factor
+
+Curve:Biquadratic,
+  GasAbsFlatBiQuad,         !- 35 Name
+  1.0, 0.0, 0.0,            !- 36 Coeff1..3 (定数1.0のフラットカーブ)
+  0.0, 0.0, 0.0,            !- 37 Coeff4..6
+  5.0, 40.0,                !- 38 Min/Max x (Chilled water / cond water temp 想定)
+  20.0, 45.0;               !- 39 Min/Max y
+
+Curve:Quadratic,
+  GasAbsLinearQuad,         !- 40 Name
+  0.0, 1.0, 0.0,            !- 41 y = 1.0 * x
+  0.0, 1.0;                 !- 42 Min/Max x (PLR想定)
+
+Curve:Quadratic,
+  GasAbsFlatQuad,           !- 43 Name
+  1.0, 0.0, 0.0,            !- 44 y = 1.0 (フラット)
+  0.0, 1.0;                 !- 45 Min/Max x
+
+Curve:Linear,
+  GasAbsInvLinearQuad,      !- 46 Name
+  1.0, 0.0,                 !- 47 y = 1.0 * x + 0
+  0.0, 1.0;                 !- 48 Min/Max x
+
+IDF
+
+    # ⑥-2-2 IDFテンプレート終端
+
+    idf_text = OpenStudio::Measure::OSArgument.makeStringArgument('idf_text', true)   # ⑥-2-3
+    idf_text.setDisplayName('挿入するIDFスニペット（セミコロン ; で終端）')            # ⑥-2-4
+    idf_text.setDefaultValue(template)                                               # ⑥-2-5
+    args << idf_text                                                                 # ⑥-2-6
+
+    # ⑥-3 既存チラー名（置換元：Chilled Water Loop 側）
+    old_chiller_name = OpenStudio::Measure::OSArgument.makeStringArgument('old_chiller_name', true) # ⑥-3-1
+    old_chiller_name.setDisplayName('既存チラー名（置換対象：例 Chiller - Water Cooled）')           # ⑥-3-2
+    old_chiller_name.setDefaultValue('Chiller - Water Cooled')                                      # ⑥-3-3
+    args << old_chiller_name                                                                        # ⑥-3-4
+
+    # ⑥-4 既存ボイラー名（置換元：Hot Water Loop 側）
+    old_boiler_name = OpenStudio::Measure::OSArgument.makeStringArgument('old_boiler_name', true)   # ⑥-4-1
+    old_boiler_name.setDisplayName('既存ボイラー名（置換対象：例 HW Boiler）')                       # ⑥-4-2
+    old_boiler_name.setDefaultValue('HW Boiler')                                                    # ⑥-4-3
+    args << old_boiler_name                                                                         # ⑥-4-4
+
+    # ⑥-5 冷水側ノード名（Chilled Water Loop）
+    chw_in_node = OpenStudio::Measure::OSArgument.makeStringArgument('chw_in_node', true)           # ⑥-5-1
+    chw_in_node.setDisplayName('冷水側入口ノード名（Chilled Water Side Inlet）')                     # ⑥-5-2
+    chw_in_node.setDefaultValue('Node 13')                                                          # ⑥-5-3
+    args << chw_in_node                                                                             # ⑥-5-4
+
+    chw_out_node = OpenStudio::Measure::OSArgument.makeStringArgument('chw_out_node', true)         # ⑥-5-5
+    chw_out_node.setDisplayName('冷水側出口ノード名（Chilled Water Side Outlet）')                   # ⑥-5-6
+    chw_out_node.setDefaultValue('Node 18')                                                         # ⑥-5-7
+    args << chw_out_node                                                                            # ⑥-5-8
+
+    # ⑥-6 温水側ノード名（Hot Water Loop）
+    hw_in_node = OpenStudio::Measure::OSArgument.makeStringArgument('hw_in_node', true)             # ⑥-6-1
+    hw_in_node.setDisplayName('温水側入口ノード名（Hot Water Side Inlet）')                         # ⑥-6-2
+    hw_in_node.setDefaultValue('Node 39')                                                           # ⑥-6-3
+    args << hw_in_node                                                                              # ⑥-6-4
+
+    hw_out_node = OpenStudio::Measure::OSArgument.makeStringArgument('hw_out_node', true)           # ⑥-6-5
+    hw_out_node.setDisplayName('温水側出口ノード名（Hot Water Side Outlet）')                       # ⑥-6-6
+    hw_out_node.setDefaultValue('Node 42')                                                          # ⑥-6-7
+    args << hw_out_node                                                                             # ⑥-6-8
+
+    # ⑥-7 凝縮水側ノード名（Condenser Loop）
+    cond_in_node = OpenStudio::Measure::OSArgument.makeStringArgument('cond_in_node', true)         # ⑥-7-1
+    cond_in_node.setDisplayName('凝縮水側入口ノード名（Condenser Side Inlet）')                     # ⑥-7-2
+    cond_in_node.setDefaultValue('Node 29')                                                         # ⑥-7-3
+    args << cond_in_node                                                                            # ⑥-7-4
+
+    cond_out_node = OpenStudio::Measure::OSArgument.makeStringArgument('cond_out_node', true)       # ⑥-7-5
+    cond_out_node.setDisplayName('凝縮水側出口ノード名（Condenser Side Outlet）')                   # ⑥-7-6
+    cond_out_node.setDefaultValue('Node 34')                                                        # ⑥-7-7
+    args << cond_out_node                                                                           # ⑥-7-8
+
+    return args  # ⑥-8-1
   end
 
-  # define what happens when the measure is run
+  # ⑦ 実行本体
   def run(workspace, runner, user_arguments)
-    super(workspace, runner, user_arguments)  # Do **NOT** remove this line
+    super(workspace, runner, user_arguments)  # ⑦-0-1
 
-    # use the built-in error checking
-    if !runner.validateUserArguments(arguments(workspace), user_arguments)
+    # ⑦-1 引数検証
+    unless runner.validateUserArguments(arguments(workspace), user_arguments)  # ⑦-1-1
+      runner.registerError('引数の検証に失敗しました。')                        # ⑦-1-2
+      return false                                                             # ⑦-1-3
+    end
+
+    # ⑦-2 引数取得（機器名・IDFテキスト）
+    equip_name = runner.getStringArgumentValue('equip_name', user_arguments)   # ⑦-2-1
+    raw_text   = runner.getStringArgumentValue('idf_text',   user_arguments)   # ⑦-2-2
+
+    # ⑦-3 引数取得（ノード名）
+    chw_in_node   = runner.getStringArgumentValue('chw_in_node',   user_arguments)  # ⑦-3-1
+    chw_out_node  = runner.getStringArgumentValue('chw_out_node',  user_arguments)  # ⑦-3-2
+    hw_in_node    = runner.getStringArgumentValue('hw_in_node',    user_arguments)  # ⑦-3-3
+    hw_out_node   = runner.getStringArgumentValue('hw_out_node',   user_arguments)  # ⑦-3-4
+    cond_in_node  = runner.getStringArgumentValue('cond_in_node',  user_arguments)  # ⑦-3-5
+    cond_out_node = runner.getStringArgumentValue('cond_out_node', user_arguments)  # ⑦-3-6
+
+    # ⑦-4 トークン置換（<NAME> → equip_name）
+    idf_text = raw_text.gsub('<NAME>', equip_name)  # ⑦-4-1
+	
+    # ⑦-4-2 デバッグ: Chiller 部分をログ出力
+    runner.registerInfo("DEBUG_IDF_TEXT_START")
+    idf_text.each_line do |line|
+      runner.registerInfo(line.chomp)
+    end
+    runner.registerInfo("DEBUG_IDF_TEXT_END")
+
+    # ⑦-5 IDF文字列のパースとWorkspaceへの追加
+    objects_added = 0  # ⑦-5-1
+
+    idf_text.split(';').each do |chunk|  # ⑦-5-2
+      chunk = chunk.strip               # ⑦-5-3
+      next if chunk.empty?              # ⑦-5-4
+
+      core = chunk.gsub(/!.*$/, '').strip  # ⑦-5-5 コメント削除
+      next if core.empty?                  # ⑦-5-6
+
+      idf_obj_str = chunk + ';'           # ⑦-5-7
+      loaded = OpenStudio::IdfObject.load(idf_obj_str)  # ⑦-5-8
+
+      unless loaded.is_initialized                      # ⑦-5-9
+        runner.registerError("IDFの解析に失敗しました:\n#{idf_obj_str}")  # ⑦-5-10
+        return false                                                   # ⑦-5-11
+      end
+
+      obj = loaded.get                         # ⑦-5-12
+      result = workspace.addObject(obj)        # ⑦-5-13
+
+      if result.empty?                         # ⑦-5-14
+        runner.registerWarning("追加失敗: #{obj.iddObject.name}")  # ⑦-5-15
+      else
+        runner.registerInfo("追加: #{obj.iddObject.name} / Name='#{equip_name}'") # ⑦-5-16
+        objects_added += 1                                            # ⑦-5-17
+      end
+    end
+
+    # ⑦-6 既存チラー／ボイラーを吸収式に置換する処理
+
+    # ⑦-6-1 Workspace から置換対象機器を自動検出
+    chiller_type_auto = 'Chiller:Electric:EIR'.to_IddObjectType # ⑦-6-1-1
+    boiler_type_auto  = 'Boiler:HotWater'.to_IddObjectType       # ⑦-6-1-2
+
+    chillers = workspace.getObjectsByType(chiller_type_auto)  # ⑦-6-1-3
+    boilers  = workspace.getObjectsByType(boiler_type_auto)   # ⑦-6-1-4
+
+    if chillers.empty?  # ⑦-6-1-5
+      runner.registerError('Workspace 内に Chiller:Electric:EIR が見つかりません。') # ⑦-6-1-6
       return false
     end
 
-    # assign the user inputs to variables
-    zone_name = runner.getStringArgumentValue('zone_name', user_arguments)
-
-    # check the user_name for reasonableness
-    if zone_name.empty?
-      runner.registerError('Empty zone name was entered.')
+    if boilers.empty?   # ⑦-6-1-7
+      runner.registerError('Workspace 内に Boiler:HotWater が見つかりません。')     # ⑦-6-1-8
       return false
     end
 
-    # get all thermal zones in the starting model
-    zones = workspace.getObjectsByType('Zone'.to_IddObjectType)
+    chiller_obj = chillers[0]  # ⑦-6-1-9
+    boiler_obj  = boilers[0]   # ⑦-6-1-10
 
-    # reporting initial condition of model
-    runner.registerInitialCondition("The building started with #{zones.size} zones.")
+    unless chiller_obj.getString(0).is_initialized  # ⑦-6-1-11
+      runner.registerError('Chiller:Electric:EIR の Name フィールドが未設定です。') # ⑦-6-1-12
+      return false
+    end
 
-    # add a new zone to the model with the new name
-    # http://apps1.eere.energy.gov/buildings/energyplus/pdfs/inputoutputreference.pdf#nameddest=Zone
-    new_zone_string = "
-    Zone,
-      #{zone_name},            !- Name
-      0,                       !- Direction of Relative North {deg}
-      0,                       !- X Origin {m}
-      0,                       !- Y Origin {m}
-      0,                       !- Z Origin {m}
-      1,                       !- Type
-      1,                       !- Multiplier
-      autocalculate,           !- Ceiling Height {m}
-      autocalculate;           !- Volume {m3}
-      "
-    idfObject = OpenStudio::IdfObject.load(new_zone_string)
-    object = idfObject.get
-    wsObject = workspace.addObject(object)
-    new_zone = wsObject.get
+    unless boiler_obj.getString(0).is_initialized   # ⑦-6-1-13
+      runner.registerError('Boiler:HotWater の Name フィールドが未設定です。')      # ⑦-6-1-14
+      return false
+    end
 
-    # echo the new zone's name back to the user, using the index based getString method
-    runner.registerInfo("A zone named '#{new_zone.getString(0)}' was added.")
+    old_chiller_name = chiller_obj.getString(0).get  # ⑦-6-1-15
+    old_boiler_name  = boiler_obj.getString(0).get   # ⑦-6-1-16
 
-    # report final condition of model
-    finishing_zones = workspace.getObjectsByType('Zone'.to_IddObjectType)
-    runner.registerFinalCondition("The building finished with #{finishing_zones.size} zones.")
+    runner.registerInfo("置換対象チラーとして '#{old_chiller_name}' を検出しました。") # ⑦-6-1-17
+    runner.registerInfo("置換対象ボイラーとして '#{old_boiler_name}' を検出しました。") # ⑦-6-1-18
 
-    return true
+    # ⑦-6-2 既存 Chiller:Electric:EIR を削除
+    chiller_type = 'Chiller:Electric:EIR'.to_IddObjectType   # ⑦-6-2-1
+    workspace.getObjectsByType(chiller_type).each do |obj|                  # ⑦-6-2-2
+      next unless obj.getString(0).is_initialized                           # ⑦-6-2-3
+      name = obj.getString(0).get                                           # ⑦-6-2-4
+      if name == old_chiller_name                                           # ⑦-6-2-5
+        runner.registerInfo("既存チラー '#{name}' を削除します。")          # ⑦-6-2-6
+        workspace.removeObject(obj.handle)                                  # ⑦-6-2-7
+      end
+    end
+
+    # ⑦-6-3 既存 Boiler:HotWater を削除
+    boiler_type = 'Boiler:HotWater'.to_IddObjectType        # ⑦-6-3-1
+    workspace.getObjectsByType(boiler_type).each do |obj|                   # ⑦-6-3-2
+      next unless obj.getString(0).is_initialized                           # ⑦-6-3-3
+      name = obj.getString(0).get                                           # ⑦-6-3-4
+      if name == old_boiler_name                                            # ⑦-6-3-5
+        runner.registerInfo("既存ボイラー '#{name}' を削除します。")        # ⑦-6-3-6
+        workspace.removeObject(obj.handle)                                  # ⑦-6-3-7
+      end
+    end
+
+    # ⑦-6-4 PlantEquipmentList 内の参照を DirectFired 吸収式に差し替え
+    list_type = 'PlantEquipmentList'.to_IddObjectType                            # ⑦-6-4-1
+    workspace.getObjectsByType(list_type).each do |plist|                        # ⑦-6-4-2
+      num_fields = plist.numFields                                               # ⑦-6-4-3
+
+      # フィールド1以降が「ObjectType / Name / ObjectType / Name ...」と並ぶ想定
+      (1...num_fields).each do |i|                                               # ⑦-6-4-4
+        field_opt = plist.getString(i)                                           # ⑦-6-4-5
+        next unless field_opt.is_initialized                                     # ⑦-6-4-6
+        val = field_opt.get                                                      # ⑦-6-4-7
+
+        # 既存チラー名または既存ボイラー名に一致する「Equipment N Name」だけ対象
+        next unless val == old_chiller_name || val == old_boiler_name            # ⑦-6-4-8
+
+        # i は「Equipment N Name」なので、その直前 i-1 が「Equipment N Object Type」
+        if i > 0                                                                 # ⑦-6-4-9
+          plist.setString(i - 1, 'ChillerHeater:Absorption:DirectFired')         # ⑦-6-4-10
+        end
+
+        # 機器名を新しい吸収式の名前（equip_name）に置換
+        plist.setString(i, equip_name)                                           # ⑦-6-4-11
+
+        # ログ出力用にリスト名を取得
+        list_name_opt = plist.getString(0)                                       # ⑦-6-4-12
+        list_name = list_name_opt.is_initialized ? list_name_opt.get : '(no name)' # ⑦-6-4-13
+        runner.registerInfo("PlantEquipmentList '#{list_name}' 内の '#{val}' を '#{equip_name}' に置換しました。")  # ⑦-6-4-14
+      end
+    end
+
+    # ⑦-6-5 挿入した ChillerHeater のノード名を Measure 引数で上書き
+    ch_type = 'ChillerHeater:Absorption:DirectFired'.to_IddObjectType  # ⑦-6-5-1
+    workspace.getObjectsByType(ch_type).each do |ch|                                   # ⑦-6-5-2
+      next unless ch.getString(0).is_initialized                                       # ⑦-6-5-3
+      next unless ch.getString(0).get == equip_name                                    # ⑦-6-5-4
+
+      idd = ch.iddObject                                                               # ⑦-6-5-5
+
+      f_chw_in   = idd.getFieldIndex('Chilled Water Inlet Node Name')    # ⑦-6-5-6
+      f_chw_out  = idd.getFieldIndex('Chilled Water Outlet Node Name')   # ⑦-6-5-7
+      f_cond_in  = idd.getFieldIndex('Condenser Inlet Node Name')        # ⑦-6-5-8
+      f_cond_out = idd.getFieldIndex('Condenser Outlet Node Name')       # ⑦-6-5-9
+      f_hw_in    = idd.getFieldIndex('Hot Water Inlet Node Name')        # ⑦-6-5-10
+      f_hw_out   = idd.getFieldIndex('Hot Water Outlet Node Name')       # ⑦-6-5-11
+      f_cap_curve   = idd.getFieldIndex('Cooling Capacity Function of Temperature Curve Name')
+      f_fuel_t      = idd.getFieldIndex('Fuel Input to Cooling Output Ratio Function of Temperature Curve Name')
+      f_fuel_plr    = idd.getFieldIndex('Fuel Input to Cooling Output Ratio Function of Part Load Ratio Curve Name')
+      f_elec_t      = idd.getFieldIndex('Electric Input to Cooling Output Ratio Function of Temperature Curve Name')
+      f_elec_plr    = idd.getFieldIndex('Electric Input to Cooling Output Ratio Function of Part Load Ratio Curve Name')
+      f_heat_cap    = idd.getFieldIndex('Heating Capacity Function of Cooling Capacity Curve Name')
+      f_heat_fuel   = idd.getFieldIndex('Fuel Input to Heat Output Ratio During Heating Only Operation Curve Name')
+
+      [ ['CapCurve',  f_cap_curve],
+        ['FuelT',     f_fuel_t],
+        ['FuelPLR',   f_fuel_plr],
+        ['ElecT',     f_elec_t],
+        ['ElecPLR',   f_elec_plr],
+        ['HeatCap',   f_heat_cap],
+        ['HeatFuel',  f_heat_fuel]
+      ].each do |label, idx_opt|
+        next unless idx_opt.is_initialized
+        val_opt = ch.getString(idx_opt.get)
+        val = val_opt.is_initialized ? val_opt.get : '(blank)'
+        runner.registerInfo("DEBUG_CH_CURVE_FIELD #{label} = '#{val}'")
+      end
+
+      # （この下に既存のノード setString 群が続く）
+
+
+      ch.setString(f_chw_in.get,  chw_in_node)   if f_chw_in.is_initialized    # ⑦-6-5-12
+      ch.setString(f_chw_out.get, chw_out_node) if f_chw_out.is_initialized   # ⑦-6-5-13
+      ch.setString(f_cond_in.get, cond_in_node) if f_cond_in.is_initialized   # ⑦-6-5-14
+      ch.setString(f_cond_out.get, cond_out_node) if f_cond_out.is_initialized # ⑦-6-5-15
+      ch.setString(f_hw_in.get,   hw_in_node)   if f_hw_in.is_initialized     # ⑦-6-5-16
+      ch.setString(f_hw_out.get,  hw_out_node)  if f_hw_out.is_initialized    # ⑦-6-5-17
+
+      runner.registerInfo("ChillerHeater '#{equip_name}' のノードを更新しました。") # ⑦-6-5-18
+    end
+
+    # ⑦-6-6 Branch 内の既存チラー／ボイラーを吸収式に置換＋ノード更新             # ⑦-6-6-1
+    br_type = 'Branch'.to_IddObjectType                                             # ⑦-6-6-2
+    workspace.getObjectsByType(br_type).each do |br|                                # ⑦-6-6-3
+      num_fields = br.numFields                                                     # ⑦-6-6-4
+
+      # Branch 名（ログ用）                                                         # ⑦-6-6-5
+      br_name_opt = br.getString(0)                                                 # ⑦-6-6-6
+      br_name = br_name_opt.is_initialized ? br_name_opt.get : '(no name)'          # ⑦-6-6-7
+
+      # フィールド2以降を 4 つずつ (Type, Name, Inlet, Outlet) とみなして走査        # ⑦-6-6-8
+      i = 2                                                                         # ⑦-6-6-9
+      while (i + 3) < num_fields                                                    # ⑦-6-6-10
+        type_opt   = br.getString(i)                                                # ⑦-6-6-11
+        comp_opt   = br.getString(i + 1)                                            # ⑦-6-6-12
+        inlet_opt  = br.getString(i + 2)                                            # ⑦-6-6-13
+        outlet_opt = br.getString(i + 3)                                            # ⑦-6-6-14
+
+        current_type = type_opt.is_initialized ? type_opt.get : ''                  # ⑦-6-6-15
+        current_name = comp_opt.is_initialized ? comp_opt.get : ''                  # ⑦-6-6-16
+
+        # 旧チラー／旧ボイラー以外はスキップ（名前が空でも Type で判定）             # ⑦-6-6-17
+        unless current_type == 'Chiller:Electric:EIR' ||                            # ⑦-6-6-18
+               current_type == 'Boiler:HotWater'                                    # ⑦-6-6-19
+          i += 4                                                                    # ⑦-6-6-20
+          next                                                                      # ⑦-6-6-21
+        end                                                                         # ⑦-6-6-22
+
+        # 冷水側 or 温水側かで新しいノード名を決定                                   # ⑦-6-6-23
+        if current_type == 'Chiller:Electric:EIR'                                   # ⑦-6-6-24
+          new_in_node  = chw_in_node                                               # ⑦-6-6-25
+          new_out_node = chw_out_node                                              # ⑦-6-6-26
+        else                                                                        # ⑦-6-6-27
+          new_in_node  = hw_in_node                                                # ⑦-6-6-28
+          new_out_node = hw_out_node                                               # ⑦-6-6-29
+        end                                                                         # ⑦-6-6-30
+
+        # Object Type / Name / Inlet / Outlet を吸収式に置換                           # ⑦-6-6-31
+        br.setString(i,     'ChillerHeater:Absorption:DirectFired')                # ⑦-6-6-32
+        br.setString(i + 1, equip_name)                                            # ⑦-6-6-33
+        br.setString(i + 2, new_in_node)                                           # ⑦-6-6-34
+        br.setString(i + 3, new_out_node)                                          # ⑦-6-6-35
+
+        # ログ出力（名前が空だった場合は (blank) と表示）                             # ⑦-6-6-36
+        shown_name = current_name.empty? ? '(blank)' : current_name                # ⑦-6-6-37
+        runner.registerInfo(
+          "Branch '#{br_name}' のコンポーネント '#{shown_name}' を "\
+          "'#{equip_name}' に置換しました。"
+        )                                                                          # ⑦-6-6-38
+
+        i += 4                                                                      # ⑦-6-6-39
+      end                                                                           # ⑦-6-6-40
+    end                                                                             # ⑦-6-6-41
+
+    # ⑦-7 最終メッセージ
+    runner.registerFinalCondition("IDFオブジェクトを #{objects_added} 件追加しました。") # ⑦-7-1
+    return true  # ⑦-7-2
   end
-end
 
-# register the measure to be used by the application
-InsertGasAbsorptionChillerHeater.new.registerWithApplication
+end  # ⑧-1 class の end
+
+# ⑨ Measureをアプリケーションに登録
+InsertGasAbsorptionChillerHeater.new.registerWithApplication  # ⑨-1
+
+# ⑨ Measureをアプリケーションに登録
+InsertGasAbsorptionChillerHeater.new.registerWithApplication  # ⑨-1
