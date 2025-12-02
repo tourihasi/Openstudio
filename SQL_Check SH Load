@@ -1,1 +1,58 @@
+-- ① 対象ゾーンの人員負荷＋機器顕熱 時系列抽出
+SELECT
+  -- ①-1 日付（EnergyPlus既定の2006年で日付を組み立て）
+  date(printf('%04d-%02d-%02d', 2006, t.Month, t.Day)) AS Date,
+  -- ①-2 日種（平日/休日/設計日など）
+  t.DayType AS Weekday,
+  -- ①-3 時刻（時）
+  t.Hour,
+  -- ①-4 人員顕熱（Zone People Sensible Heating Rate）
+  SUM(
+    CASE 
+      WHEN dd.VariableName = 'Zone People Sensible Heating Rate' 
+      THEN d.VariableValue ELSE 0 
+    END
+  ) AS People_Sensible_W,
+  -- ①-5 人員潜熱（Zone People Latent Gain Rate）
+  SUM(
+    CASE 
+      WHEN dd.VariableName = 'Zone People Latent Gain Rate' 
+      THEN d.VariableValue ELSE 0 
+    END
+  ) AS People_Latent_W,
+  -- ①-6 機器顕熱（電気機器の電力を顕熱とみなす）
+  SUM(
+    CASE 
+      WHEN dd.VariableName = 'Zone Electric Equipment Electricity Rate' 
+      THEN d.VariableValue ELSE 0 
+    END
+  ) AS Equip_Sensible_W
+FROM 
+  -- ② 時系列データ本体
+  ReportVariableData d
+JOIN 
+  -- ③ 変数辞書（変数名・KeyValue を含む）
+  ReportVariableDataDictionary dd
+    ON d.ReportVariableDataDictionaryIndex = dd.ReportVariableDataDictionaryIndex
+JOIN 
+  -- ④ 時刻テーブル
+  Time t
+    ON d.TimeIndex = t.TimeIndex
+WHERE
+  -- ⑤ 対象ThermalZone名（前段のゾーン一覧SQLで得た名称をそのまま使用）
+  dd.KeyValue = '01016 展示ホール会議室 THERMALZONE'
+  -- ⑥ 抽出する内部負荷の変数名を指定
+  AND dd.VariableName IN (
+    'Zone People Sensible Heating Rate',
+    'Zone People Latent Gain Rate',
+    'Zone Electric Equipment Electricity Rate'
+  )
+  -- ⑦ 設計日を除外（必要に応じて削除・変更可）
+  AND t.DayType NOT IN ('SummerDesignDay','WinterDesignDay')
+GROUP BY
+  -- ⑧ 日付＋日種＋時 で集計（1時間ごとの値）
+  Date, Weekday, t.Hour
+ORDER BY
+  -- ⑨ 時系列順に並べる
+  Date, t.Hour;
 
