@@ -1,0 +1,142 @@
+# ============================================================
+# ① OpenStudio ModelMeasure
+#    Export Zone/Space/Surface attributes to CSV (capture-like)
+# ============================================================
+
+# ① 必須モジュール
+require 'openstudio'
+require 'csv'
+require 'fileutils'
+
+class ExportZoneSurfaceConstructionToCsv < OpenStudio::Measure::ModelMeasure
+
+  # ② Measure名
+  def name
+    'Export Zone/Space/Surface/Construction to CSV'
+  end
+
+  # ③ 説明
+  def description
+    'Exports ThermalZone / Space / Surface / Construction / Boundary / Sun/Wind exposures to CSV without running EnergyPlus.'
+  end
+
+  # ④ 詳細
+  def modeler_description
+    'Traverses model.getSurfaces and writes capture-like table. Intended for model QA and comparison.'
+  end
+
+  # ⑤ 引数定義（今回はファイル名だけ任意にできるようにしています）
+  def arguments(model)
+    args = OpenStudio::Measure::OSArgumentVector.new
+
+    # ⑤-1 CSVファイル名
+    out_name = OpenStudio::Measure::OSArgument.makeStringArgument('csv_name', false)
+    out_name.setDisplayName('Output CSV file name')
+    out_name.setDefaultValue('zone_space_surface_construction.csv')
+    args << out_name
+
+    args
+  end
+
+  # ⑥ 実行本体（Run Measure のトリガーでここが呼ばれます）
+  def run(model, runner, user_arguments)
+    super(model, runner, user_arguments)
+
+    # ⑥-1 引数取得
+    unless runner.validateUserArguments(arguments(model), user_arguments)
+      return false
+    end
+    csv_name = runner.getStringArgumentValue('csv_name', user_arguments)
+
+    # ⑥-2 出力先（runフォルダ配下）
+    root_dir = runner.workflow.absoluteRootDir.to_s
+    out_dir  = File.join(root_dir, 'export_csv')
+    FileUtils.mkdir_p(out_dir)
+    out_path = File.join(out_dir, csv_name)
+
+    # ⑥-3 出力ヘッダ（キャプチャ相当）
+    headers = [
+      'ThermalZone',
+      'Space Name',
+      'Surface Name',
+      'Surface Type',
+      'Construction',
+      'Outside Boundary Condition',
+      'Outside Boundary Condition Object',
+      'Sun Exposure',
+      'Wind Exposure'
+    ]
+
+    # ⑥-4 Surface走査して行データ生成
+    rows = []
+    model.getSurfaces.each do |s|
+      # ⑥-4-1 Space
+      space_name = ''
+      tz_name    = ''
+      if s.space.is_initialized
+        sp = s.space.get
+        space_name = sp.nameString
+
+        # ⑥-4-2 ThermalZone（Space→ThermalZone）
+        if sp.thermalZone.is_initialized
+          tz_name = sp.thermalZone.get.nameString
+        end
+      end
+
+      # ⑥-4-3 Surface基本
+      surface_name = s.nameString
+      surface_type = s.surfaceType
+
+      # ⑥-4-4 Construction（未設定の場合は空）
+      cons_name = ''
+      if s.construction.is_initialized
+        cons_name = s.construction.get.nameString
+      end
+
+      # ⑥-4-5 Outside Boundary Condition
+      obc = s.outsideBoundaryCondition
+
+      # ⑥-4-6 Outside Boundary Condition Object（OSバージョン差異に対応）
+      obc_obj = ''
+
+      # ⑥-4-6-1 もし outsideBoundaryConditionObject が使える版ならそれを優先
+      if s.respond_to?(:outsideBoundaryConditionObject) && s.outsideBoundaryConditionObject.is_initialized
+        obc_obj = s.outsideBoundaryConditionObject.get.nameString
+
+      # ⑥-4-6-2 使えない版は、境界条件が Surface の場合 adjacentSurface を参照
+      elsif s.outsideBoundaryCondition.to_s == 'Surface' && s.adjacentSurface.is_initialized
+        obc_obj = s.adjacentSurface.get.nameString
+      end
+
+      # ⑥-4-7 Sun/Wind Exposure
+      sun  = s.sunExposure
+      wind = s.windExposure
+
+      rows << [
+        tz_name,
+        space_name,
+        surface_name,
+        surface_type,
+        cons_name,
+        obc,
+        obc_obj,
+        sun,
+        wind
+      ]
+    end
+
+    # ⑥-5 CSV書き出し
+    CSV.open(out_path, 'w', encoding: 'UTF-8') do |csv|
+      csv << headers
+      rows.each { |r| csv << r }
+    end
+
+    # ⑥-6 ログ出力
+    runner.registerFinalCondition("Exported #{rows.size} surfaces to CSV: #{out_path}")
+
+    true
+  end
+end
+
+# ⑦ Measure登録
+ExportZoneSurfaceConstructionToCsv.new.registerWithApplication
