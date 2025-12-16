@@ -1,0 +1,44 @@
+-- ② 'aim15597 Reversed' の Inside / Outside を抽出する例
+
+WITH inside AS (
+    SELECT
+        t.TimeIndex,
+        date(printf('%04d-%02d-%02d', 2006, t.Month, t.Day)) AS Date,
+        t.DayType AS Weekday,
+        t.Hour    AS Hour,
+        d.VariableValue AS InsideTemp_C
+    FROM ReportVariableData d
+    JOIN ReportVariableDataDictionary dd
+      ON d.ReportVariableDataDictionaryIndex = dd.ReportVariableDataDictionaryIndex
+    JOIN Time t
+      ON d.TimeIndex = t.TimeIndex
+    WHERE
+      dd.VariableName = 'Surface Inside Face Temperature'
+      AND dd.KeyValue = 'aim15597 Reversed'      -- ★ここを ① で見つかった名前に変更
+),
+
+outside AS (
+    SELECT
+        t.TimeIndex,
+        d.VariableValue AS OutsideTemp_C
+    FROM ReportVariableData d
+    JOIN ReportVariableDataDictionary dd
+      ON d.ReportVariableDataDictionaryIndex = dd.ReportVariableDataDictionaryIndex
+    JOIN Time t
+      ON d.TimeIndex = t.TimeIndex
+    WHERE
+      dd.VariableName = 'Surface Outside Face Temperature'
+      AND dd.KeyValue = 'aim15597 Reversed'      -- ★同じく
+)
+
+SELECT
+    i.Date,
+    i.Weekday,
+    i.Hour,
+    i.InsideTemp_C,
+    o.OutsideTemp_C
+FROM inside i
+LEFT JOIN outside o
+  ON i.TimeIndex = o.TimeIndex
+ORDER BY
+    i.Date, i.Hour;
