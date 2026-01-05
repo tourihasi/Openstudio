@@ -1,8 +1,8 @@
 -- ⑥ 室温=Zone Mean Air Temperature、外気温=Site Outdoor Air Drybulb Temperature
 --    ゾーン名と 'Environment' を辞書テーブルで特定してから突き合わせ
 SELECT
-  -- ⑥-1 日付を生成（E+既定年の2006でOK、年は解析用途なので固定で可）
-  date(printf('%04d-%02d-%02d', 2006, t.Month, t.Day)) AS Date,
+  -- ⑥-1 日付を生成（E+既定年の2023でOK、年は解析用途なので固定で可）
+  date(printf('%04d-%02d-%02d', 2023, t.Month, t.Day)) AS Date,
   -- ⑥-2 曜日/日種
   t.DayType AS Weekday,
   -- ⑥-3 時
