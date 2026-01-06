@@ -1,0 +1,44 @@
+-- ① 目的：NODE 8〜NODE 12 の質量流量（★風量測定＝System Node Mass Flow Rate）
+SELECT
+  date(printf('%04d-%02d-%02d', 2023, t.Month, t.Day)) AS Date,
+  t.Hour,
+  dd.KeyValue AS NodeName,
+  d.VariableValue AS MassFlow_kg_s,
+  (d.VariableValue / 1.2) * 3600 AS VolumeFlow_m3_h
+FROM ReportVariableData d
+JOIN ReportVariableDataDictionary dd
+  ON d.ReportVariableDataDictionaryIndex = dd.ReportVariableDataDictionaryIndex
+JOIN Time t
+  ON d.TimeIndex = t.TimeIndex
+WHERE
+  dd.VariableName = 'System Node Mass Flow Rate'
+  AND dd.KeyValue IN ('NODE 64','NODE 62','NODE 68','NODE 70')
+  AND t.Month IN (11,12,1,2,3)
+  AND t.Hour BETWEEN 9 AND 18
+ORDER BY
+  Date,
+  t.Hour,
+  dd.KeyValue;
+
+-- ③ 目的：Node10周辺（★乾球温度の測定＝System Node Temperature）
+SELECT
+  date(printf('%04d-%02d-%02d', 2023, t.Month, t.Day)) AS Date,
+  t.Hour,
+  dd.KeyValue AS NodeName,
+  d.VariableValue AS Temp_C
+FROM ReportVariableData d
+JOIN ReportVariableDataDictionary dd
+  ON d.ReportVariableDataDictionaryIndex = dd.ReportVariableDataDictionaryIndex
+JOIN Time t
+  ON d.TimeIndex = t.TimeIndex
+WHERE
+  dd.VariableName = 'System Node Temperature'
+  AND dd.KeyValue IN ('NODE 8','NODE 9','NODE 10','NODE 11','NODE 12')
+  AND t.Month IN (11,12,1,2,3)
+  AND t.Hour BETWEEN 9 AND 18
+ORDER BY Date, t.Hour, dd.KeyValue;
+
+
+
+
+
