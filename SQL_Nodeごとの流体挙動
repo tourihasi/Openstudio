@@ -33,7 +33,7 @@ JOIN Time t
   ON d.TimeIndex = t.TimeIndex
 WHERE
   dd.VariableName = 'System Node Temperature'
-  AND dd.KeyValue IN ('NODE 8','NODE 9','NODE 10','NODE 11','NODE 12')
+  AND dd.KeyValue IN ('NODE 64','NODE 62','NODE 68','NODE 70')
   AND t.Month IN (11,12,1,2,3)
   AND t.Hour BETWEEN 9 AND 18
 ORDER BY Date, t.Hour, dd.KeyValue;
