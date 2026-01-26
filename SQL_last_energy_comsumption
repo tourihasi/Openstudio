@@ -1,8 +1,24 @@
-月別ガス消費エネルギー量
-
+-- ① 目的：月別にガス・電気の消費エネルギー（J）を同時に取得
 SELECT
   t.Month,
-  SUM(d.VariableValue) AS NaturalGas_J
+  -- ② ガス消費エネルギー（J）
+  SUM(
+    CASE
+      WHEN dd.VariableName = 'NaturalGas:Facility'
+      THEN d.VariableValue
+      ELSE 0
+    END
+  ) AS NaturalGas_J,
+
+  -- ③ 電気消費エネルギー（J）
+  SUM(
+    CASE
+      WHEN dd.VariableName = 'Electricity:Facility'
+      THEN d.VariableValue
+      ELSE 0
+    END
+  ) AS Electricity_J
+
 FROM
   ReportVariableData d
 JOIN
@@ -11,29 +27,17 @@ JOIN
 JOIN
   Time t
     ON d.TimeIndex = t.TimeIndex
+
+-- ④ 対象はガス・電気のみ
 WHERE
-  dd.VariableName = 'NaturalGas:Facility'
+  dd.VariableName IN (
+    'NaturalGas:Facility',
+    'Electricity:Facility'
+  )
+
+-- ⑤ 月別集計
 GROUP BY
   t.Month
-ORDER BY
-  t.Month;
 
-月別電気消費エネルギー量
-
-SELECT
-  t.Month,
-  SUM(d.VariableValue) AS Electricity_J
-FROM
-  ReportVariableData d
-JOIN
-  ReportVariableDataDictionary dd
-    ON d.ReportVariableDataDictionaryIndex = dd.ReportVariableDataDictionaryIndex
-JOIN
-  Time t
-    ON d.TimeIndex = t.TimeIndex
-WHERE
-  dd.VariableName = 'Electricity:Facility'
-GROUP BY
-  t.Month
 ORDER BY
   t.Month;
