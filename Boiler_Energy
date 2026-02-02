@@ -1,0 +1,25 @@
+-- ① ボイラの燃料消費（Gas）を時刻別に抽出
+-- ② KeyValue がボイラ名になるので、まず一覧で名称を確認してから絞る
+-- ③ Hourlyだけ（IntervalType=1）に限定し、設計日混入を避ける
+
+SELECT
+  date(printf('%04d-%02d-%02d', 2023, t.Month, t.Day)) AS Date,
+  t.Hour,
+  dd.KeyValue AS BoilerName,
+  dd.VariableName,
+  SUM(d.VariableValue) AS Gas_J
+FROM ReportVariableData d
+JOIN ReportVariableDataDictionary dd
+  ON d.ReportVariableDataDictionaryIndex = dd.ReportVariableDataDictionaryIndex
+JOIN Time t
+  ON d.TimeIndex = t.TimeIndex
+WHERE
+  t.IntervalType = 1
+  AND dd.VariableName IN (
+    'Boiler NaturalGas Energy',
+    'Boiler NaturalGas Rate'
+  )
+GROUP BY
+  t.Month, t.Day, t.Hour, dd.KeyValue, dd.VariableName
+ORDER BY
+  Date, t.Hour, BoilerName;
