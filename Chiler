@@ -1,0 +1,18 @@
+SELECT
+  t.Month,
+  SUM(d.VariableValue) AS Electricity_J
+FROM
+  ReportVariableData d
+JOIN
+  ReportVariableDataDictionary dd
+    ON d.ReportVariableDataDictionaryIndex = dd.ReportVariableDataDictionaryIndex
+JOIN
+  Time t
+    ON d.TimeIndex = t.TimeIndex
+WHERE
+  dd.VariableName = 'Chiller Electricity Energy'
+  AND dd.KeyValue = 'CHILLER ELECTRIC EIR 1'
+GROUP BY
+  t.Month
+ORDER BY
+  t.Month;
