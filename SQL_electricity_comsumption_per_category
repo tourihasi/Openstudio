@@ -1,6 +1,31 @@
--- [①] 月次：指定パラメータをすべて GJ で集計
+-- [①] 月次×カテゴリ別：電気内訳（kWh）※VariableNameで集計
 SELECT
   t.Month AS Month,
+
+  -- [②] 照明
+  SUM(CASE WHEN dd.VariableName IN (
+      'Zone Lights Electricity Energy'
+  ) THEN d.VariableValue ELSE 0 END) / 3600000.0 AS Lights_Electricity_GJ,
+
+  -- [③] コンセント・機器
+  SUM(CASE WHEN dd.VariableName IN (
+      'Zone Electric Equipment Electricity Energy'
+  ) THEN d.VariableValue ELSE 0 END) / 1.0e9 AS Equipmenty_Electricity_GJ,
+
+  -- [④] ファン
+  SUM(CASE WHEN dd.VariableName IN (
+      'Fan Electricity Energy'
+  ) THEN d.VariableValue ELSE 0 END) / 1.0e9 AS Fansy_Electricity_GJ,
+
+  -- [⑤] ポンプ
+  SUM(CASE WHEN dd.VariableName IN (
+      'Pump Electricity Energy'
+  ) THEN d.VariableValue ELSE 0 END) / 1.0e9 AS Pumpsy_Electricity_GJ,
+
+  -- [⑥] チラー（存在する場合）
+  SUM(CASE WHEN dd.VariableName IN (
+      'Chiller Electricity Energy'
+  ) THEN d.VariableValue ELSE 0 END) / 1.0e9 AS Chillery_Electricity_GJ,
 
   -- [②] Boiler Ancillary Electricity Energy（GJ）
   SUM(CASE WHEN dd.VariableName = 'Boiler Ancillary Electricity Energy'
@@ -85,29 +110,6 @@ JOIN ReportVariableDataDictionary dd
   ON d.ReportVariableDataDictionaryIndex = dd.ReportVariableDataDictionaryIndex
 JOIN Time t
   ON d.TimeIndex = t.TimeIndex
-
--- [㉑] 指定パラメータのみ（ガスは含めない）
-WHERE dd.VariableName IN (
-  'Boiler Ancillary Electricity Energy',
-  'Cooling Tower Fan Electricity Energy',
-  'Heat Exchanger Electricity Energy',
-  'VRF Heat Pump Cooling Electricity Energy',
-  'VRF Heat Pump Crankcase Heater Electricity Energy',
-  'VRF Heat Pump Defrost Electricity Energy',
-  'VRF Heat Pump Heating Electricity Energy',
-  'Zone VRF Air Terminal Cooling Electricity Energy',
-  'Zone VRF Air Terminal Heating Electricity Energy',
-  'Electric Equipment Electricity Energy',
-  'Electric Equipment Convective Heating Energy',
-  'Electric Equipment Latent Gain Energy',
-  'Electric Equipment Lost Heat Energy',
-  'Electric Equipment Total Heating Energy',
-  'Zone Electric Equipment Convective Heating Energy',
-  'Zone Electric Equipment Latent Gain Energy',
-  'Zone Electric Equipment Lost Heat Energy',
-  'Zone Electric Equipment Radiant Heating Energy',
-  'Zone Electric Equipment Total Heating Energy'
-)
 
 GROUP BY t.Month
 ORDER BY t.Month;
