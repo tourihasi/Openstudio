@@ -1,0 +1,113 @@
+-- [①] 月次：指定パラメータをすべて GJ で集計
+SELECT
+  t.Month AS Month,
+
+  -- [②] Boiler Ancillary Electricity Energy（GJ）
+  SUM(CASE WHEN dd.VariableName = 'Boiler Ancillary Electricity Energy'
+           THEN d.VariableValue ELSE 0 END) / 1.0e9 AS Boiler_Ancillary_Electricity_GJ,
+
+  -- [③] Cooling Tower Fan Electricity Energy（GJ）
+  SUM(CASE WHEN dd.VariableName = 'Cooling Tower Fan Electricity Energy'
+           THEN d.VariableValue ELSE 0 END) / 1.0e9 AS Cooling_Tower_Fan_Electricity_GJ,
+
+  -- [④] Heat Exchanger Electricity Energy（GJ）
+  SUM(CASE WHEN dd.VariableName = 'Heat Exchanger Electricity Energy'
+           THEN d.VariableValue ELSE 0 END) / 1.0e9 AS Heat_Exchanger_Electricity_GJ,
+
+  -- [⑤] VRF Heat Pump Cooling Electricity Energy（GJ）
+  SUM(CASE WHEN dd.VariableName = 'VRF Heat Pump Cooling Electricity Energy'
+           THEN d.VariableValue ELSE 0 END) / 1.0e9 AS VRF_HP_Cooling_Electricity_GJ,
+
+  -- [⑥] VRF Heat Pump Heating Electricity Energy（GJ）
+  SUM(CASE WHEN dd.VariableName = 'VRF Heat Pump Heating Electricity Energy'
+           THEN d.VariableValue ELSE 0 END) / 1.0e9 AS VRF_HP_Heating_Electricity_GJ,
+
+  -- [⑦] VRF Heat Pump Crankcase Heater Electricity Energy（GJ）
+  SUM(CASE WHEN dd.VariableName = 'VRF Heat Pump Crankcase Heater Electricity Energy'
+           THEN d.VariableValue ELSE 0 END) / 1.0e9 AS VRF_HP_CrankcaseHeater_Electricity_GJ,
+
+  -- [⑧] VRF Heat Pump Defrost Electricity Energy（GJ）
+  SUM(CASE WHEN dd.VariableName = 'VRF Heat Pump Defrost Electricity Energy'
+           THEN d.VariableValue ELSE 0 END) / 1.0e9 AS VRF_HP_Defrost_Electricity_GJ,
+
+  -- [⑨] Zone VRF Air Terminal Cooling Electricity Energy（GJ）
+  SUM(CASE WHEN dd.VariableName = 'Zone VRF Air Terminal Cooling Electricity Energy'
+           THEN d.VariableValue ELSE 0 END) / 1.0e9 AS Zone_VRF_Terminal_Cooling_Electricity_GJ,
+
+  -- [⑩] Zone VRF Air Terminal Heating Electricity Energy（GJ）
+  SUM(CASE WHEN dd.VariableName = 'Zone VRF Air Terminal Heating Electricity Energy'
+           THEN d.VariableValue ELSE 0 END) / 1.0e9 AS Zone_VRF_Terminal_Heating_Electricity_GJ,
+
+  -- [⑪] Electric Equipment Electricity Energy（GJ）
+  SUM(CASE WHEN dd.VariableName = 'Electric Equipment Electricity Energy'
+           THEN d.VariableValue ELSE 0 END) / 1.0e9 AS Electric_Equipment_Electricity_GJ,
+
+  -- ===== 熱取得・損失系（名称にElectricが含まれていても電気消費ではなく熱量） =====
+
+  -- [⑫] Electric Equipment Convective Heating Energy（GJ）
+  SUM(CASE WHEN dd.VariableName = 'Electric Equipment Convective Heating Energy'
+           THEN d.VariableValue ELSE 0 END) / 1.0e9 AS Electric_Equipment_Convective_Heating_GJ,
+
+  -- [⑬] Electric Equipment Latent Gain Energy（GJ）
+  SUM(CASE WHEN dd.VariableName = 'Electric Equipment Latent Gain Energy'
+           THEN d.VariableValue ELSE 0 END) / 1.0e9 AS Electric_Equipment_Latent_Gain_GJ,
+
+  -- [⑭] Electric Equipment Lost Heat Energy（GJ）
+  SUM(CASE WHEN dd.VariableName = 'Electric Equipment Lost Heat Energy'
+           THEN d.VariableValue ELSE 0 END) / 1.0e9 AS Electric_Equipment_Lost_Heat_GJ,
+
+  -- [⑮] Electric Equipment Total Heating Energy（GJ）
+  SUM(CASE WHEN dd.VariableName = 'Electric Equipment Total Heating Energy'
+           THEN d.VariableValue ELSE 0 END) / 1.0e9 AS Electric_Equipment_Total_Heating_GJ,
+
+  -- [⑯] Zone Electric Equipment Convective Heating Energy（GJ）
+  SUM(CASE WHEN dd.VariableName = 'Zone Electric Equipment Convective Heating Energy'
+           THEN d.VariableValue ELSE 0 END) / 1.0e9 AS Zone_ElecEquip_Convective_Heating_GJ,
+
+  -- [⑰] Zone Electric Equipment Radiant Heating Energy（GJ）
+  SUM(CASE WHEN dd.VariableName = 'Zone Electric Equipment Radiant Heating Energy'
+           THEN d.VariableValue ELSE 0 END) / 1.0e9 AS Zone_ElecEquip_Radiant_Heating_GJ,
+
+  -- [⑱] Zone Electric Equipment Latent Gain Energy（GJ）
+  SUM(CASE WHEN dd.VariableName = 'Zone Electric Equipment Latent Gain Energy'
+           THEN d.VariableValue ELSE 0 END) / 1.0e9 AS Zone_ElecEquip_Latent_Gain_GJ,
+
+  -- [⑲] Zone Electric Equipment Lost Heat Energy（GJ）
+  SUM(CASE WHEN dd.VariableName = 'Zone Electric Equipment Lost Heat Energy'
+           THEN d.VariableValue ELSE 0 END) / 1.0e9 AS Zone_ElecEquip_Lost_Heat_GJ,
+
+  -- [⑳] Zone Electric Equipment Total Heating Energy（GJ）
+  SUM(CASE WHEN dd.VariableName = 'Zone Electric Equipment Total Heating Energy'
+           THEN d.VariableValue ELSE 0 END) / 1.0e9 AS Zone_ElecEquip_Total_Heating_GJ
+
+FROM ReportVariableData d
+JOIN ReportVariableDataDictionary dd
+  ON d.ReportVariableDataDictionaryIndex = dd.ReportVariableDataDictionaryIndex
+JOIN Time t
+  ON d.TimeIndex = t.TimeIndex
+
+-- [㉑] 指定パラメータのみ（ガスは含めない）
+WHERE dd.VariableName IN (
+  'Boiler Ancillary Electricity Energy',
+  'Cooling Tower Fan Electricity Energy',
+  'Heat Exchanger Electricity Energy',
+  'VRF Heat Pump Cooling Electricity Energy',
+  'VRF Heat Pump Crankcase Heater Electricity Energy',
+  'VRF Heat Pump Defrost Electricity Energy',
+  'VRF Heat Pump Heating Electricity Energy',
+  'Zone VRF Air Terminal Cooling Electricity Energy',
+  'Zone VRF Air Terminal Heating Electricity Energy',
+  'Electric Equipment Electricity Energy',
+  'Electric Equipment Convective Heating Energy',
+  'Electric Equipment Latent Gain Energy',
+  'Electric Equipment Lost Heat Energy',
+  'Electric Equipment Total Heating Energy',
+  'Zone Electric Equipment Convective Heating Energy',
+  'Zone Electric Equipment Latent Gain Energy',
+  'Zone Electric Equipment Lost Heat Energy',
+  'Zone Electric Equipment Radiant Heating Energy',
+  'Zone Electric Equipment Total Heating Energy'
+)
+
+GROUP BY t.Month
+ORDER BY t.Month;
