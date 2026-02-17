@@ -1,0 +1,20 @@
+-- [①] Otherに落ちる VariableName を「一覧」で確定（ガス除外：電気のみ）
+SELECT DISTINCT
+  dd.VariableName
+FROM ReportVariableDataDictionary dd
+WHERE
+  -- [②] 電気に限定（ガスは含まれない）
+  dd.VariableName LIKE '%Electric%'
+  AND (dd.VariableName LIKE '%Energy%' OR dd.VariableName LIKE '%Electricity%')
+  AND dd.VariableName NOT LIKE '%NaturalGas%'
+
+  -- [③] 主要カテゴリ（ここに入れたもの以外＝Other）
+  AND dd.VariableName NOT IN (
+    'Zone Lights Electricity Energy',
+    'Zone Electric Equipment Electricity Energy',
+    'Fan Electricity Energy',
+    'Pump Electricity Energy',
+    'Chiller Electricity Energy'
+  )
+ORDER BY
+  dd.VariableName;
