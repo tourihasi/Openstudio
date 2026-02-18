@@ -5,7 +5,7 @@ SELECT
   -- [②] 照明
   SUM(CASE WHEN dd.VariableName IN (
       'Zone Lights Electricity Energy'
-  ) THEN d.VariableValue ELSE 0 END) / 3600000.0 AS Lights_Electricity_GJ,
+  ) THEN d.VariableValue ELSE 0 END) / 1.0e9 AS Lights_Electricity_GJ,
 
   -- [③] コンセント・機器
   SUM(CASE WHEN dd.VariableName IN (
