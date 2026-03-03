@@ -15,17 +15,17 @@ SELECT
   -- [④] ファン
   SUM(CASE WHEN dd.VariableName IN (
       'Fan Electricity Energy'
-  ) THEN d.VariableValue ELSE 0 END) / 1.0e9 AS Fansy_Electricity_GJ,
+  ) THEN d.VariableValue ELSE 0 END) / 1.0e9 AS Fan_Electricity_GJ,
 
   -- [⑤] ポンプ
   SUM(CASE WHEN dd.VariableName IN (
       'Pump Electricity Energy'
-  ) THEN d.VariableValue ELSE 0 END) / 1.0e9 AS Pumpsy_Electricity_GJ,
+  ) THEN d.VariableValue ELSE 0 END) / 1.0e9 AS Pump_Electricity_GJ,
 
   -- [⑥] チラー（存在する場合）
   SUM(CASE WHEN dd.VariableName IN (
       'Chiller Electricity Energy'
-  ) THEN d.VariableValue ELSE 0 END) / 1.0e9 AS Chillery_Electricity_GJ,
+  ) THEN d.VariableValue ELSE 0 END) / 1.0e9 AS Chiller_Electricity_GJ,
 
   -- [②] Boiler Ancillary Electricity Energy（GJ）
   SUM(CASE WHEN dd.VariableName = 'Boiler Ancillary Electricity Energy'
